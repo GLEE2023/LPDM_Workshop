@@ -24,9 +24,3 @@ jupyterlab-geojson>=3,<4
 jupyterlab-tour
 jupyterlab-night
 jupyterlab_miami_nights
-ipywidgets>=8.0.0,<9
-ipyevents>=2.0.1
-ipycanvas>=0.9.1
-ipyleaflet
-plotly>=5,<6
-bqplot
