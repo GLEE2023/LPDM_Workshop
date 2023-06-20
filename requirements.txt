@@ -18,3 +18,4 @@ ipykernel==6.15.0
 jupyterlite-core==0.1.0
 jupyterlab~=3.5.1
 jupyterlab-night
+jupyterlite-pyodide-kernel==0.0.6
