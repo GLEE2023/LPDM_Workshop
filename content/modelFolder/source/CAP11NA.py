@@ -10,7 +10,7 @@ class CAP11NA(Sensor):
     def __init__(self, time_step, duration, mode, loop_rate):
         """
         Initilize object class
-            arguments = [ Time_step, duration_of_whole, modal, loop_rate]
+            arguments = [Time_step, duration_of_whole, modal, loop_rate]
             
         """
         self.time_step = time_step
@@ -47,7 +47,7 @@ class CAP11NA(Sensor):
         Data_sec = []
         time = 0
         i=0
-        k= int(self.duration / self.time_step)
+        k = int(self.duration / self.time_step)
         time_index.append(0)
         #initialized parameters
         
@@ -91,12 +91,12 @@ class CAP11NA(Sensor):
         self.mode_cap = mode[0]      
         self.time_duration = mode[1]
         self.sample_rate = mode[2]
-        self.loop_rate = mode[3]
+        
         cap_estimated_power_usage = 1 # mW
         # These values are set up the way they were calculated in a previous version, and when its off this will return 0 usage. These values are likely to be modified in the future
         
         if mode[0] == "CAP_ON":
-            return cap_estimated_power_usage;
+            return cap_estimated_power_usage
         elif mode[0] == "CAP_OFF":
             return 0
         else:
@@ -112,16 +112,16 @@ class CAP11NA(Sensor):
         returns:
             An integer representation of bytes per second.
         """
-        cap_bytes_per_second = 2
+        cap_bytes_per_second = 6
         self.mode_cap = mode[0]      
         self.time_duration = mode[1]
         self.sample_rate = mode[2]
-        self.loop_rate = mode[3]
         
         # These values are set up the way they were calculated in a previous version, and when its off this will return 0 usage. These values are likely to be modified in the future
             
         if mode[0] == "CAP_ON":
-            return self.loop_rate * cap_bytes_per_second 
+            bit_sec = (cap_bytes_per_second) * (1/self.sample_rate)
+            return bit_sec
         elif mode[0] == "CAP_OFF":
             return 0
         else:
