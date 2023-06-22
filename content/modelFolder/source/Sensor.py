@@ -25,7 +25,8 @@ class Sensor:
                 active_times: active times list from generateActiveList() function.
         """
         colors = []
-        num_modes = len(set([time[2] for time in active_times]))#gets number of distinct modes in active_times
+        #num_modes = len(set([time[2] for time in active_times]))#gets number of distinct modes in active_times
+        num_modes = 3
         #generates number of random colors for active times plot, different color for each mode (usually).
         for i in range(num_modes):
             color = "#%06x" % random.randint(0, 0xFFFFFF)

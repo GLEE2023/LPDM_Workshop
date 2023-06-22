@@ -202,24 +202,28 @@ class MPU6000(Sensor):
         """
         error = self.error_check()
         if error == False:
-            measure_rate = 0
             if mode == "SHUTDOWN" :
                 return 0
-            #this function will be heavily influenced by sample_rate_divisor. See page 11 of the register map for the full equation.
+                          
+            if mode == "ACCELEROMETER_AND_GYROSCOPE" or mode == "ACCELEROMETER_AND_GYROSCOPE_DMP":
+                return (12+4)*sampling_rate_divisor
+            else:
+                return (6+4)*sampling_rate_divisor
+
+
+"""
+#this function will be heavily influenced by sample_rate_divisor. See page 11 of the register map for the full equation.
             #https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
             if len(digital_low_pass) == 3:
                 gyroscope_output_rate = 8000 if digital_low_pass == "000" or digital_low_pass == "111" else 1000
             else:
                 print("Error. Digital Low Pass needs to be a 3 bit number.")
 
-            sample_rate = gyroscope_output_rate / (1 + sampling_rate_divisor) #how fast measurements are written to
+            if (1/sampling_rate_divisor) > gyroscope_output_rate:
+                sampling_rate_divisor = 1 / gyroscope_output_rate
+                
+            measure_rate = sampling_rate_divisor
             if mode == "ACCELEROMETER_LOW_POWER" : #accelerometer measurement registers, in Hz.
                 measure_rate = low_power_wakeup
-
-            else :
-                measure_rate = sample_rate 
-            if mode == "ACCELEROMETER_AND_GYROSCOPE" :
-                return 12*measure_rate
-            return 6*measure_rate
-
-
+                return (6+4)*measure_rate
+"""

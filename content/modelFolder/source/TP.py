@@ -51,10 +51,10 @@ class TP(Sensor):
         power_used = 0
         TP_power_microamps = 0
         voltage = 3.3
-        if(mode == "on"):
+        if(mode == "TP_ON"):
             TP_power_microamps = 15
             power_used = (TP_power_microamps * voltage) / 1000 
-        elif(mode == "TP_off"):
+        elif(mode == "TP_OFF"):
             TP_power_microamps = 0
             power_used = (TP_power_microamps * voltage) / 1000 
         else:
@@ -111,7 +111,7 @@ class TP(Sensor):
         TP measurement registers, in Hz.
         """
         measure_rate = (self.loop_rate, sample_rate)[self.loop_rate > sample_rate]
-        if(mode == "on"):
+        if(mode == "TP_ON"):
             return 6*measure_rate
         else:
             return 0*measure_rate

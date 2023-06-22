@@ -208,6 +208,11 @@ class SM111K():
             1x2 list of times that the lunasat can be run
         """
         time,power = self.model()
+        multiplier = int(np.ceil(len(power) / len(max_power)))
+        if(multiplier==0):
+            multiplier=1
+        max_power = np.tile(max_power,multiplier)
+        max_power = max_power[:len(power)]
         possiblePower = np.where(power>max_power,power,0)
 
         fig, ax = plt.subplots(figsize=(8,5))
@@ -221,5 +226,7 @@ class SM111K():
 
         timePossible = np.where(power>max_power,time,None)
         timePossible = timePossible[timePossible!=None]
-
+        if(len(timePossible)==0):
+            print("ERROR! At least one of your configurations exceeds the maximum available power.")
+            return [None, None]
         return [min(timePossible),max(timePossible)]

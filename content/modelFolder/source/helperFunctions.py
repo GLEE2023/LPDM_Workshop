@@ -6,29 +6,14 @@ def generate_active_list(total_time: float, modelist: list) -> list:
     """
     Returns list similar to the form of active_times, but based off of modedict.
     active_times: [(int(start1), int(end1), "mode1"), (int(start2), int(end2), "mode2")]
-    
-    Example:
-        modes = {"low_power_wakeup_5": 10, "accelerometer_only": 20, "gyroscope_accelerometer_DMP":30}
-        #low_power_wakeup_5 for 10 seconds, accelerometer_only for 20 seconds, and so on.
-        #10 + 20 + 30 = 60, so the period for this configuration is 60 seconds.
 
-
-        active_times_list = generate_active_list(total_time = 600, modedict = modes)
-        #for 600 seconds, repeat the configuration set in modedict.
-    
-
-    args:
+    Parameters
         total_time (float): total active time of the sensor, ie 10 seconds or 10 hours.
-        modelist (list): numpy array describing scheduling period based off of modedict. See example.
-        modedict form: {string(mode1):int(duration1), string(mode2):int(duration2), ...}
+        modelist (list): numpy array describing scheduling period
 
     returns:
         final_arr, list of active times of each mode
     """
-    #modedict has different modes and times that add up to a single cycle.
-    #for accelerometer:
-    #modedict = {"gyroscope_accelerometer_DMP":15, "accelerometer_only":15,"low_power_wakeup_5":40}
-    #total period is 70 seconds (15+15+40)
 
     modelist = np.array(modelist,dtype=object)
     keys = modelist[:,0]
@@ -57,37 +42,77 @@ def generate_active_list(total_time: float, modelist: list) -> list:
 def plot_total_data(time_list: np.array, data_list: np.array): 
     """
     Plot each line in data_list using time_list.
-    The last value of data_list must be total_data, and the last value of time_list
-    can be any time vector returned from runSim.
     
-    args:
-        time_list (nparray): list of time vectors returned from runSim for each sensor.
-        data_list (nparray): list of data vectors returned from runSim for each sensor.
+    Parameters
+        time_list (numpy array): list of time vectors returned from run_sim for each sensor.
+        data_list (numpy array): list of data vectors returned from run_sim for each sensor.
 
-    returns:
-        nothing
+    Returns
+        None
     """
     
     label_reference = {
-        0:"Accelerometer Sensor", 1:"Magnetometer Sensor", 2:"Thermopile Sensor", 
-        3:"Temperature Sensor", 4:"Total data"
+        0:"Min. Data", 1:"Accelerometer Sensor", 2:"Magnetometer Sensor", 3:"Thermopile Sensor", 
+        4:"Temperature Sensor", 5:"Capacitive Sensor", 6:"Microcontroller", 7:"Total Data"
     }
+    
+    for i in range(0,8):
+        plt.plot(time_list[i],data_list[i],label=label_reference[i])
 
-    plt.figure(figsize=(10,4))
-    #plot each line using zip().
-    for index, value in enumerate(zip(data_list, time_list)):
-        plt.plot(value[1], value[0], label = label_reference[index])
+    #plt.figure(figsize=(10,4))
+    #for index, value in enumerate(zip(data_list, time_list)):
+    #    plt.plot(value[1], value[0], label = label_reference[index])
 
-    #plot modification.
     plt.grid(visible=True)
     plt.xlabel("Time (s)",fontsize=16)
-    plt.ylabel("Data",fontsize=16)
-    plt.title("Data vs Time All Sensors (Bytes)",fontsize=16)
+    plt.ylabel("Data (Bytes)",fontsize=16)
+    plt.title("Data vs Time for all Components",fontsize=16)
     plt.ion()
     plt.tight_layout()
-    plt.legend();
+    plt.legend()
+    
+def plot_total_power(time_list: np.array, power_list: np.array):
+    """
+    Plot each line in power_list using time_list.
+    
+    Parameters
+        time_list (numpy array): list of time vectors returned from run_sim for each sensor.
+        power_list (numpy array): list of power vectors returned from run_sim for each sensor.
+
+    Returns
+        None
+    """
+    
+    label_reference = {
+        0:"Min. Power", 1:"Accelerometer Sensor", 2:"Magnetometer Sensor", 3:"Thermopile Sensor", 
+        4:"Temperature Sensor", 5:"Capacitive Sensor", 6:"Microcontroller", 7:"Total Power"
+    }
+    
+    for i in range(0,8):
+        plt.plot(time_list[i],power_list[i],label=label_reference[i])
+
+    #plt.figure(figsize=(10,4))
+    #for index, value in enumerate(zip(data_list, time_list)):
+    #    plt.plot(value[1], value[0], label = label_reference[index])
+
+    plt.grid(visible=True)
+    plt.xlabel("Time (s)",fontsize=16)
+    plt.ylabel("Power (mW)",fontsize=16)
+    plt.title("Power vs Time for all Components",fontsize=16)
+    plt.ion()
+    plt.tight_layout()
+    plt.legend()
     
 def valid():
+    """
+    Finds all valid configuration options
+    
+    Parameters
+        None
+
+    Returns
+        Valid configurations for all 5 sensors (TODO: Add microcontroller and RF)
+    """
     # getting all valid inputs for tmp
     
     num_averages_options = [0, 8, 32, 64]
@@ -148,53 +173,41 @@ def valid():
     valid_MAG += s_configs + [('POWER_DOWN',0,0)]
 
     # getting all valid inputs for acc
-    lowpass = [str(s) for s in np.arange(0,8,1)] # digital low pass filter
-    sample_rate = [str(s) for s in np.arange(0,256,1)] # 0-250 sample rate
-    modes = ["low_power_wakeup_1.25", "low_power_wakeup_5", "low_power_wakeup_20", "low_power_wakeup_40", "accelerometer_only", "gyroscope_only", "gyroscope_accelerometer"]
-    valid_ACC = [mode + "_" + p + "_" + sr for mode in modes for p in lowpass for sr in sample_rate] + ["sleep"]
+    low_power_wakeup = [1.25, 5, 20, 40]
+    digital_low_pass = ["000", "001", "010", "011", "100", "101", "110", "111" ]
+    mode_options = ["ACCELEROMETER", "ACCELEROMETER_LOW_POWER", "GYROSCOPE", "GYROSCOPE_DMP", "ACCELEROMETER_AND_GYROSCOPE", "ACCELEROMETER_AND_GYROSCOPE_DMP", "SHUTDOWN"]
+    valid_ACC = []
+
+    for lpw in low_power_wakeup:
+        if lpw == 1.25:
+            dlp_options_trunc = digital_low_pass[1:7]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 1.25, dlp) for dlp in dlp_options_trunc]
+            valid_ACC += lpw_configs
+        elif lpw == 5:
+            dlp_options_trunc = digital_low_pass[1:7]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 5, dlp) for dlp in dlp_options_trunc]
+            valid_ACC += lpw_configs
+        elif lpw == 20:
+            dlp_options_trunc = digital_low_pass[1:7]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 20, dlp) for dlp in dlp_options_trunc]
+            valid_ACC += lpw_configs
+        elif lpw == 40:
+            dlp_options_trunc = digital_low_pass[1:7]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 40, dlp) for dlp in dlp_options_trunc]
+            valid_ACC += lpw_configs
+
+    os_configs = [("ACCELEROMETER",0,"001"), ("ACCELEROMETER",0,"010"), ("ACCELEROMETER",0,"011"), ("ACCELEROMETER",0,"100"), ("ACCELEROMETER",0,"101"), ("ACCELEROMETER",0,"110"),
+                  ("GYROSCOPE",0,"000"), ("GYROSCOPE",0,"001"), ("GYROSCOPE",0,"010"), ("GYROSCOPE",0,"011"), ("GYROSCOPE",0,"100"), ("GYROSCOPE",0,"101"), ("GYROSCOPE",0,"110"), ("GYROSCOPE",0,"111"),
+                  ("GYROSCOPE_DMP",0,"000"), ("GYROSCOPE_DMP",0,"001"), ("GYROSCOPE_DMP",0,"010"), ("GYROSCOPE_DMP",0,"011"), ("GYROSCOPE_DMP",0,"100"), ("GYROSCOPE_DMP",0,"101"), ("GYROSCOPE_DMP",0,"110"), ("GYROSCOPE_DMP",0,"111"),
+                  ("ACCELEROMETER_AND_GYROSCOPE",0,"001"), ("ACCELEROMETER_AND_GYROSCOPE",0,"010"), ("ACCELEROMETER_AND_GYROSCOPE",0,"011"), ("ACCELEROMETER_AND_GYROSCOPE",0,"100"), ("ACCELEROMETER_AND_GYROSCOPE",0,"101"), ("ACCELEROMETER_AND_GYROSCOPE",0,"110"), 
+                 ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"001"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"010"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"011"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"100"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"101"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"110")]
+    valid_ACC += os_configs + [('SHUTDOWN',0,"000")]
+
+    valid_TP = [("TP_OFF"),("TP_ON")]
+    valid_CAP = [("CAP_OFF"),("CAP_ON")]
+
+    return valid_TMP, valid_ACC, valid_MAG, valid_TP, valid_CAP
     
-    # # run this once to populate txt files with possible inputs
-    # with open('sensorParams/accelerometerParams.txt', 'w') as f:
-    #     for line in valid_ACC:
-    #         f.write(line + "\n")
-    # with open('sensorParams/magnetometerParams.txt', 'w') as f:
-    #     for line in validMAG:
-    #         f.write(line + "\n")
-    # with open('sensorParams/tmpSensorParams.txt', 'w') as f:
-    #     for line in validTMP:
-    #         f.write(line + "\n")
-
-    return valid_TMP, valid_ACC, valid_MAG
-    
-def validate_configs(configurations):
-    configurations = np.array(configurations)
-    tmp_modes = configurations[:,0]
-    acc_modes = configurations[:,1]
-    mag_modes = configurations[:,2]
-
-    valid_TMP, valid_ACC, valid_MAG = valid()
-    valid_config = True
-
-    for mode in tmp_modes:
-        if mode not in valid_TMP:
-            print("Invalid temperature mode {}".format(mode))
-            print("* Read description of inputs again or see tmpSensorParams.txt in the sensorParams folder for a list of possible inputs for the tmp sensor.\n")
-            valid_config = False
-            
-    for mode in acc_modes:
-        if mode not in valid_ACC:
-            print("Invalid accelerometer mode {}".format(mode))
-            print("* See accelerometerParams.txt in the sensorParams folder for a list of possible inputs for the accelerometer.\n")
-            valid_config = False
-
-    for mode in mag_modes:
-        if mode not in valid_MAG:
-            print("Invalid magnetometer mode {}".format(mode))
-            print("* See magnetometerParams.txt in the sensorParams folder for a list of possible inputs for the magnetometer.\n")
-            valid_config = False
-
-    return valid_config
-# [acc_power, mag_power, tp_power, tmp_power, cap_power, mic_power, rf_power, total_pow]
 def plot_power_separate(time_list, power_list): 
     # PLOT POWER
     fig, axs = plt.subplots(1,5, figsize=(8,2))
@@ -204,16 +217,9 @@ def plot_power_separate(time_list, power_list):
         axs[i].plot(time_list[i], power, label = labels[i])
         axs[i].set_ylim([0, 70]) # normalize y limits
         axs[i].fill_between(time_list[i], power, where=((time_list[i] >= 0) & (time_list[i] <= len(power))), color='orange')
-        #axs[i].legend(fontsize=5)
         axs[i].set_title(labels[i], fontsize = 8)
         axs[i].grid()
 
-    #axs[4].plot([0, time_list[0][-1]], [chip_pow, chip_pow], label = "AT Mega")
-    #axs[4].set_ylim([0, 70]) # normalize y limits
-    #axs[4].fill_between(time_list[0], chip_pow, where=((time_list[0] >= 0) & (time_list[0] <= len(power))), color='orange')
-    #axs[5].legend(fontsize=5)
-    #axs[4].set_title("AT Mega", fontsize = 8)
-    #axs[4].grid()
     fig.supxlabel('Time (s)')
     fig.supylabel('Power (mW)')
     plt.tight_layout();
