@@ -62,7 +62,11 @@ def plot_total_data(time_list: np.array, data_list: np.array):
     #plt.figure(figsize=(10,4))
     #for index, value in enumerate(zip(data_list, time_list)):
     #    plt.plot(value[1], value[0], label = label_reference[index])
-
+    datarate_limit = 1000
+    max_datarate = np.ones(len(data_list[0]))
+    for i in range(0,len(max_datarate)):
+        max_datarate[i] = (i * datarate_limit) + datarate_limit
+    plt.plot(time_list[0],max_datarate,label="Max. Datarate")
     plt.grid(visible=True)
     plt.xlabel("Time (s)",fontsize=16)
     plt.ylabel("Data (Bytes)",fontsize=16)
@@ -70,6 +74,13 @@ def plot_total_data(time_list: np.array, data_list: np.array):
     plt.ion()
     plt.tight_layout()
     plt.legend()
+    
+    timePossible = np.where(data_list[7]>max_datarate,time_list[0],None)
+    for i in range(0,len(max_datarate)):
+        if(timePossible[i]!=None and i!=0):
+            print("ERROR! At least one of your configurations exceeds the maximum datarate at " + str(i) + " seconds.")
+            return "ERROR"
+    return "Configurations meet datarate requirements"
     
 def plot_total_power(time_list: np.array, power_list: np.array):
     """

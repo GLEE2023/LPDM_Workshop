@@ -228,5 +228,7 @@ class SM111K():
         timePossible = timePossible[timePossible!=None]
         if(len(timePossible)==0):
             print("ERROR! At least one of your configurations exceeds the maximum available power.")
-            return [None, None]
-        return [min(timePossible),max(timePossible)]
+            return "ERROR"
+        print("Configurations possible in the interval:")
+        print([min(timePossible),max(timePossible)])
+        return "Configurations meet power requirements"
