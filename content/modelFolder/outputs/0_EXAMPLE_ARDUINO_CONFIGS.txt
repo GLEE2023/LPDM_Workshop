@@ -1,5 +1,5 @@
 team_no: 0
 team_name: EXAMPLE_ARDUINO_CONFIGS
-Bitstrings: {"0b10110001110010011"}
+Bitstrings: {"0b10000001010001010000000000001110001"}
 Durations: {600}
-Sampling Rates: {{10.0,250.0,10.0,0.1,30.0}}
+Sampling Rates: {{10.0,250.0,10.0,0.001,30.0}}

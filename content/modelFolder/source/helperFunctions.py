@@ -184,35 +184,36 @@ def valid():
     valid_MAG += s_configs + [('POWER_DOWN',0,0)]
 
     # getting all valid inputs for acc
-    low_power_wakeup = [1.25, 5, 20, 40]
+    low_power_wakeup = [0, 1.25, 5, 20, 40]
     digital_low_pass = ["000", "001", "010", "011", "100", "101", "110", "111" ]
     mode_options = ["ACCELEROMETER", "ACCELEROMETER_LOW_POWER", "GYROSCOPE", "GYROSCOPE_DMP", "ACCELEROMETER_AND_GYROSCOPE", "ACCELEROMETER_AND_GYROSCOPE_DMP", "SHUTDOWN"]
+    sample_rate_divisor = []
     valid_ACC = []
 
     for lpw in low_power_wakeup:
         if lpw == 1.25:
             dlp_options_trunc = digital_low_pass[1:7]
-            lpw_configs = [("ACCELEROMETER_LOW_POWER", 1.25, dlp) for dlp in dlp_options_trunc]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 1.25, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
             valid_ACC += lpw_configs
         elif lpw == 5:
             dlp_options_trunc = digital_low_pass[1:7]
-            lpw_configs = [("ACCELEROMETER_LOW_POWER", 5, dlp) for dlp in dlp_options_trunc]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 5, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
             valid_ACC += lpw_configs
         elif lpw == 20:
             dlp_options_trunc = digital_low_pass[1:7]
-            lpw_configs = [("ACCELEROMETER_LOW_POWER", 20, dlp) for dlp in dlp_options_trunc]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 20, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
             valid_ACC += lpw_configs
         elif lpw == 40:
             dlp_options_trunc = digital_low_pass[1:7]
-            lpw_configs = [("ACCELEROMETER_LOW_POWER", 40, dlp) for dlp in dlp_options_trunc]
+            lpw_configs = [("ACCELEROMETER_LOW_POWER", 40, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
             valid_ACC += lpw_configs
-
-    os_configs = [("ACCELEROMETER",0,"001"), ("ACCELEROMETER",0,"010"), ("ACCELEROMETER",0,"011"), ("ACCELEROMETER",0,"100"), ("ACCELEROMETER",0,"101"), ("ACCELEROMETER",0,"110"),
-                  ("GYROSCOPE",0,"000"), ("GYROSCOPE",0,"001"), ("GYROSCOPE",0,"010"), ("GYROSCOPE",0,"011"), ("GYROSCOPE",0,"100"), ("GYROSCOPE",0,"101"), ("GYROSCOPE",0,"110"), ("GYROSCOPE",0,"111"),
-                  ("GYROSCOPE_DMP",0,"000"), ("GYROSCOPE_DMP",0,"001"), ("GYROSCOPE_DMP",0,"010"), ("GYROSCOPE_DMP",0,"011"), ("GYROSCOPE_DMP",0,"100"), ("GYROSCOPE_DMP",0,"101"), ("GYROSCOPE_DMP",0,"110"), ("GYROSCOPE_DMP",0,"111"),
-                  ("ACCELEROMETER_AND_GYROSCOPE",0,"001"), ("ACCELEROMETER_AND_GYROSCOPE",0,"010"), ("ACCELEROMETER_AND_GYROSCOPE",0,"011"), ("ACCELEROMETER_AND_GYROSCOPE",0,"100"), ("ACCELEROMETER_AND_GYROSCOPE",0,"101"), ("ACCELEROMETER_AND_GYROSCOPE",0,"110"), 
-                 ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"001"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"010"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"011"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"100"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"101"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"110")]
-    valid_ACC += os_configs + [('SHUTDOWN',0,"000")]
+    dlp_options_trunc = digital_low_pass[1:7]
+    accelerometer_config = [("ACCELEROMETER",0, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
+    gyroscope_config = [("GYROSCOPE",0, dlp, srd) for dlp in digital_low_pass for srd in range(256)]
+    gyroscope_dmp_config = [("GYROSCOPE_DMP",0, dlp, srd) for dlp in digital_low_pass for srd in range(256)]
+    accelerometer_gyroscope_config = [("ACCELEROMETER_AND_GYROSCOPE",0, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
+    accelerometer_gyroscope_dmp_config = [("ACCELEROMETER_AND_GYROSCOPE_DMP",0, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
+    valid_ACC += accelerometer_config + gyroscope_config + gyroscope_dmp_config + accelerometer_gyroscope_config +accelerometer_gyroscope_dmp_config + [('SHUTDOWN',0,"000", srd) for srd in range(256)]
 
     valid_TP = [("TP_OFF"),("TP_ON")]
     valid_CAP = [("CAP_OFF"),("CAP_ON")]
@@ -220,7 +221,18 @@ def valid():
     return valid_TMP, valid_ACC, valid_MAG, valid_TP, valid_CAP
     
 def plot_power_separate(time_list, power_list): 
-    # PLOT POWER
+    """
+      Plots seperate power usage plots for sensors
+
+      Parameters
+      ----------
+        time_list: np array
+        power_list: np array
+
+      Returns
+      -------
+        None
+    """
     fig, axs = plt.subplots(1,5, figsize=(8,2))
     labels = ["Accelerometer Sensor", "Magnetometer Sensor", "Thermopile Sensor", "Temperature Sensor", "Capacitive Sensor", "Microcontroller", "Total"]
     

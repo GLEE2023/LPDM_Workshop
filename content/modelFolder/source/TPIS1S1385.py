@@ -7,9 +7,10 @@ from typing import List
 VOLTAGE = 3.3 #Volts
 ACTIVE_CURRENT = 15 #uA
 SHUTDOWN_CURRENT = 0 #uA
+MEASUREMENT_DURATION = 0.0005 #s
 
 
-class TPIS1385(Sensor):
+class TPIS1S1385(Sensor):
 
     def __init__ (self, time_step, duration, modes_tp, loop_rate = 60):
         self.time_step = time_step
@@ -62,13 +63,13 @@ class TPIS1385(Sensor):
             return np.array(power), np.array(data), np.array(self.time)
         return [], [], []
 
-    def get_mode_power(self, mode):
+    def get_mode_power(self, mode, sampling_rate):
         """
           This function calculates power when sensor is active
 
           Parameters
           ----------
-            mode: String representing mode of TPIS1385 sensor
+            mode: String representing mode of TPIS1S1385 sensor
 
           Returns
           -------
@@ -79,34 +80,41 @@ class TPIS1385(Sensor):
         power_used = 0
         voltage = VOLTAGE
         if(mode == "TP_ON"):
-            TP_power_microamps = ACTIVE_CURRENT 
-            power_used = (TP_power_microamps * voltage / 1000) 
+            if MEASUREMENT_DURATION < sampling_rate:
+              TP_power_microamps = ACTIVE_CURRENT 
+              power_used = ((TP_power_microamps * voltage / 1000))/sampling_rate
+            else:
+                print('Your choice of sampling rate exceeded the speed of the TPIS1S1385 sensor.')
         elif(mode == "TP_OFF"):
-            TP_power_microamps = SHUTDOWN_CURRENT
-            power_used = (TP_power_microamps * voltage / 1000)
+            if MEASUREMENT_DURATION < sampling_rate:
+              TP_power_microamps = SHUTDOWN_CURRENT
+              power_used = ((TP_power_microamps * voltage / 1000))/sampling_rate
+            else:
+                print('Your choice of sampling rate exceeded the speed of the TPIS1S1385 sensor.')
         else:
-            print("Invalid mode {} entered.".format(mode, ))
+            print("Invalid mode entered.")
             return -1
         return power_used
-    def get_bytes_per_second(self, mode, sample_rate = 0.64):
+    def get_bytes_per_second(self, mode, sampling_rate):
         """
           This function calculates the data being collected and how much
 
           Parameters
           ----------
-            mode: String representing mode of TPIS1385 sensor
+            mode: String representing mode of TPIS1S1385 sensor
 
           Returns
           -------
             The measure rate and how much data is being collected in Bytes
         """
         measure_rate = 0 #how fast measurements are written to TP measurement registers, in Hz.
-        self.get_mode_power(mode)
-        measure_rate = (self.loop_rate, sample_rate)[self.loop_rate > sample_rate]
+        if(sampling_rate < MEASUREMENT_DURATION):
+            sampling_rate = MEASUREMENT_DURATION
+        measure_rate = sampling_rate
         if(mode == "TP_ON"):
-            return 6*measure_rate
+            return 6/measure_rate
         else:
-            return 0*measure_rate  
+            return 0 
     def get_all_modes_power(self):
         """
           Computes the power consumption of all modes in modes_tp
@@ -129,10 +137,10 @@ class TPIS1385(Sensor):
             if start_index < 0 or end_index > len(self.time): # not valid time
                 print("Error. Index not valid.")
                 return
-
+            print(times)
             params = times[2]
             power = 0
-            power = self.get_mode_power(params)
+            power = self.get_mode_power(params,times[3])
 
             for i in range(start_index, end_index):
                 power_arr[i] = power
@@ -151,14 +159,14 @@ class TPIS1385(Sensor):
             data_arr: list of all computed data usages
         """    
         length = len(self.time)
-        data_arr = [0] * length # creating corresponding power array to time intervals, default values 
+        data_arr = [0] * length 
         data_accumulated = 0
         
         for times in self.active_time_params: # for each active period
             start_index = int(times[0] / self.time_step) 
             end_index = int(times[1] / self.time_step)
             params = times[2]
-            data_per_second = self.get_bytes_per_second(params)
+            data_per_second = self.get_bytes_per_second(params,times[3])
 
             for i in range(start_index, length):
                 if i < end_index:
@@ -166,4 +174,3 @@ class TPIS1385(Sensor):
                 data_arr[i] = data_accumulated 
                 
         return data_arr
-    
