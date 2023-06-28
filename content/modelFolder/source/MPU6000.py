@@ -15,37 +15,36 @@ class MPU6000(Sensor):
         self.loop_rate = loop_rate
         self.time = np.arange(0,self.duration,self.time_step)
 
-    def generate_valid_configs_acc(self):
-        low_power_wakeup = [0, 1.25, 5, 20, 40]
+    def generate_valid_configs_tp(self):
+        low_power_wakeup = [1.25, 5, 20, 40]
         digital_low_pass = ["000", "001", "010", "011", "100", "101", "110", "111" ]
         mode_options = ["ACCELEROMETER", "ACCELEROMETER_LOW_POWER", "GYROSCOPE", "GYROSCOPE_DMP", "ACCELEROMETER_AND_GYROSCOPE", "ACCELEROMETER_AND_GYROSCOPE_DMP", "SHUTDOWN"]
-        sample_rate_divisor = []
         all_configs = []
 
         for lpw in low_power_wakeup:
             if lpw == 1.25:
                 dlp_options_trunc = digital_low_pass[1:7]
-                lpw_configs = [("ACCELEROMETER_LOW_POWER", 1.25, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
+                lpw_configs = [("ACCELEROMETER_LOW_POWER", 1.25, dlp) for dlp in dlp_options_trunc]
                 all_configs += lpw_configs
             elif lpw == 5:
                 dlp_options_trunc = digital_low_pass[1:7]
-                lpw_configs = [("ACCELEROMETER_LOW_POWER", 5, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
+                lpw_configs = [("ACCELEROMETER_LOW_POWER", 5, dlp) for dlp in dlp_options_trunc]
                 all_configs += lpw_configs
             elif lpw == 20:
                 dlp_options_trunc = digital_low_pass[1:7]
-                lpw_configs = [("ACCELEROMETER_LOW_POWER", 20, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
+                lpw_configs = [("ACCELEROMETER_LOW_POWER", 20, dlp) for dlp in dlp_options_trunc]
                 all_configs += lpw_configs
             elif lpw == 40:
                 dlp_options_trunc = digital_low_pass[1:7]
-                lpw_configs = [("ACCELEROMETER_LOW_POWER", 40, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
+                lpw_configs = [("ACCELEROMETER_LOW_POWER", 40, dlp) for dlp in dlp_options_trunc]
                 all_configs += lpw_configs
-        dlp_options_trunc = digital_low_pass[1:7]
-        accelerometer_config = [("ACCELEROMETER",0, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
-        gyroscope_config = [("GYROSCOPE",0, dlp, srd) for dlp in digital_low_pass for srd in range(256)]
-        gyroscope_dmp_config = [("GYROSCOPE_DMP",0, dlp, srd) for dlp in digital_low_pass for srd in range(256)]
-        accelerometer_gyroscope_config = [("ACCELEROMETER_AND_GYROSCOPE",0, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
-        accelerometer_gyroscope_dmp_config = [("ACCELEROMETER_AND_GYROSCOPE_DMP",0, dlp, srd) for dlp in dlp_options_trunc for srd in range(256)]
-        all_configs += accelerometer_config + gyroscope_config + gyroscope_dmp_config + accelerometer_gyroscope_config +accelerometer_gyroscope_dmp_config + [('SHUTDOWN',0,"000", srd) for srd in range(256)]
+
+        os_configs = [("ACCELEROMETER",0,"001"), ("ACCELEROMETER",0,"010"), ("ACCELEROMETER",0,"011"), ("ACCELEROMETER",0,"100"), ("ACCELEROMETER",0,"101"), ("ACCELEROMETER",0,"110"),
+                      ("GYROSCOPE",0,"000"), ("GYROSCOPE",0,"001"), ("GYROSCOPE",0,"010"), ("GYROSCOPE",0,"011"), ("GYROSCOPE",0,"100"), ("GYROSCOPE",0,"101"), ("GYROSCOPE",0,"110"), ("GYROSCOPE",0,"111"),
+                      ("GYROSCOPE_DMP",0,"000"), ("GYROSCOPE_DMP",0,"001"), ("GYROSCOPE_DMP",0,"010"), ("GYROSCOPE_DMP",0,"011"), ("GYROSCOPE_DMP",0,"100"), ("GYROSCOPE_DMP",0,"101"), ("GYROSCOPE_DMP",0,"110"), ("GYROSCOPE_DMP",0,"111"),
+                      ("ACCELEROMETER_AND_GYROSCOPE",0,"001"), ("ACCELEROMETER_AND_GYROSCOPE",0,"010"), ("ACCELEROMETER_AND_GYROSCOPE",0,"011"), ("ACCELEROMETER_AND_GYROSCOPE",0,"100"), ("ACCELEROMETER_AND_GYROSCOPE",0,"101"), ("ACCELEROMETER_AND_GYROSCOPE",0,"110"), 
+                     ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"001"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"010"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"011"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"100"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"101"), ("ACCELEROMETER_AND_GYROSCOPE_DMP",0,"110")]
+        all_configs += os_configs + [('SHUTDOWN',0,"000")]
         return all_configs
     def error_check(self):
         """
@@ -60,14 +59,14 @@ class MPU6000(Sensor):
             error: True if a configuration is invalid, False otherwise
         """
         error = False
-        all_configs = self.generate_valid_configs_acc()
+        all_configs = self.generate_valid_configs_tp()
         for param in self.modes_mpu:
             if param[0] not in all_configs:
                 print("Error. Invalid configuration {}. Valid Configurations to choose from: {}".format(param[0], all_configs))
                 error = True
         return error
     
-    def get_mode_power(self, mode, low_power_wakeup, digital_low_pass, sample_rate_divisor, sampling_rate):
+    def get_mode_power(self, mode, low_power_wakeup, digital_low_pass):
         """
           This function calculates power when sensor is active
 
@@ -81,67 +80,27 @@ class MPU6000(Sensor):
             A vector of when power is used. Units are in mW.
         """ 
         power = 0
-        #this formula will be heavily influenced by sample_rate_divisor. See page 11 of the register map for the full equation.
-            #https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
-        if len(digital_low_pass) == 3:
-                gyroscope_output_rate = 8000 if digital_low_pass == "000" or digital_low_pass == "111" else 1000
-        else:
-                print("Error. Digital Low Pass needs to be a 3 bit number.")
-        active_conversion_time = 1/((gyroscope_output_rate*1000) / (1 + sample_rate_divisor)) #how fast measurements are written to
-        active_conversion_time *= 1000 # overestimation
-        #accelerometer measurement registers, in Hz.
         if mode == "ACCELEROMETER_LOW_POWER":
-            if digital_low_pass != "000" and digital_low_pass !="111":
-                if active_conversion_time < sampling_rate:
-                    if low_power_wakeup == 1.25:
-                        power = ((10*VOLTAGE)/1000)/sampling_rate
-                    elif low_power_wakeup == 5:
-                        power = ((20*VOLTAGE)/1000)/sampling_rate
-                    elif low_power_wakeup == 20:
-                        power = ((70*VOLTAGE)/1000)/sampling_rate
-                    elif low_power_wakeup == 40:
-                        power = ((140*VOLTAGE)/1000)/sampling_rate
-                    else:
-                        print('This particular low_power_wakeup value does not exit')
-                else:
-                    print('Your choice of sample frequency exceed the speed of the MPU6000 sensor.')
+            if low_power_wakeup == 1.25:
+                power = (10*VOLTAGE)/1000
+            elif low_power_wakeup == 5:
+                power = (20*VOLTAGE)/1000
+            elif low_power_wakeup == 20:
+                power = (70*VOLTAGE)/1000
+            elif low_power_wakeup == 40:
+                power = (140*VOLTAGE)/1000
             else:
-                print('Your choice of digital_low_pass does not exist for the MPU6000 sensor.')
+                print('This particular low_power_wakeup value does not exit')
         elif mode == "ACCELEROMETER_AND_GYROSCOPE":
-            if digital_low_pass != "000" and digital_low_pass !="111":
-                if active_conversion_time < sampling_rate:
-                    power = ((3.8*VOLTAGE))/sampling_rate
-                else:
-                    print('Your choice of sample frequency exceed the speed of the MPU6000 sensor.')
-            else:
-                print('Your choice of digital_low_pass does not exist for the MPU6000 sensor.')
-
+            power = (3.8*VOLTAGE)
         elif mode == "ACCELEROMETER":
-            if digital_low_pass != "000" and digital_low_pass !="111":
-                if active_conversion_time < sampling_rate:
-                    power = ((500*VOLTAGE)/1000)/sampling_rate
-                else:
-                    print('Your choice of sample frequency exceed the speed of the MPU6000 sensor.')
-            else:
-                print('Your choice of digital_low_pass does not exist for the MPU6000 sensor.')
+            power = (500*VOLTAGE)/1000
         elif mode == "GYROSCOPE":
-            if active_conversion_time < sampling_rate:
-                power = ((3.6*VOLTAGE))/sampling_rate
-            else:
-                    print('Your choice of sample frequency exceed the speed of the MPU6000 sensor.')   
+            power = (3.6*VOLTAGE)
         elif mode == "ACCELEROMETER_AND_GYROSCOPE_DMP":
-            if digital_low_pass != "000" and digital_low_pass !="111":
-                if active_conversion_time < sampling_rate:
-                    power = ((3.9*VOLTAGE))/sampling_rate
-                else:
-                    print('Your choice of sample frequency exceed the speed of the MPU6000 sensor.')
-            else:
-                print('Your choice of digital_low_pass does not exist for the MPU6000 sensor.')   
+            power = (3.9*VOLTAGE)
         elif mode == "GYROSCOPE_DMP":
-            if active_conversion_time < sampling_rate:
-                power = ((3.7*VOLTAGE))/sampling_rate
-            else:
-                    print('Your choice of sample frequency exceed the speed of the MPU6000 sensor.')
+            power = (3.7*VOLTAGE)
         elif mode == "SHUTDOWN":
             power = 0
         return power
@@ -189,8 +148,8 @@ class MPU6000(Sensor):
                 print("Error. Index not valid.")
                 return
             params = times[2]
-            mode, low_power_wakeup, digital_low_pass, sample_rate_divisor = params
-            power = self.get_mode_power(mode, low_power_wakeup, digital_low_pass,sample_rate_divisor, times[3])
+            mode, low_power_wakeup, digital_low_pass = params
+            power = self.get_mode_power(mode, low_power_wakeup, digital_low_pass)
 
             for i in range(start_index, end_index):
                 power_arr[i] = power
@@ -216,8 +175,8 @@ class MPU6000(Sensor):
             start_index = int(times[0] / self.time_step) 
             end_index = int(times[1] / self.time_step)
             params = times[2]
-            mode, low_power_wakeup, digital_low_pass, sampling_rate_divisor = params
-            data_per_second = self.get_bytes_per_second(mode, low_power_wakeup, digital_low_pass, sampling_rate_divisor, times[3])
+            mode, low_power_wakeup, digital_low_pass = params
+            data_per_second = self.get_bytes_per_second(mode, low_power_wakeup, digital_low_pass, times[3])
 
             for i in range(start_index, length):
                 if i < end_index:
@@ -227,7 +186,7 @@ class MPU6000(Sensor):
         return data_arr
 
 
-    def get_bytes_per_second(self, mode, low_power_wakeup, digital_low_pass, sampling_rate_divisor, sampling_rate):
+    def get_bytes_per_second(self, mode, low_power_wakeup, digital_low_pass, sampling_rate_divisor):
         """
           This function calculates the data being collected and how much
 
@@ -247,9 +206,9 @@ class MPU6000(Sensor):
                 return 0
                           
             if mode == "ACCELEROMETER_AND_GYROSCOPE" or mode == "ACCELEROMETER_AND_GYROSCOPE_DMP":
-                return (12+4)/sampling_rate
+                return (12+4)*sampling_rate_divisor
             else:
-                return (6+4)/sampling_rate
+                return (6+4)*sampling_rate_divisor
 
 
 """
