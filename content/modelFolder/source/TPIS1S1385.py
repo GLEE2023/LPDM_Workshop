@@ -137,7 +137,6 @@ class TPIS1S1385(Sensor):
             if start_index < 0 or end_index > len(self.time): # not valid time
                 print("Error. Index not valid.")
                 return
-            print(times)
             params = times[2]
             power = 0
             power = self.get_mode_power(params,times[3])
