@@ -353,12 +353,9 @@ def generate_dataset(config_list, duration_list, sampling_rates_list, team_name,
     f.write("team_name: " + str(team_name) + "\n")
     f.write("Bitstrings: {")
     for i in range(0,len(bitstrings)-1):
-        f.write("\"")
         f.write(bitstrings[i])
-        f.write("\",")
-    f.write("\"")
+        f.write(",")
     f.write(bitstrings[-1])
-    f.write("\"")
     f.write("}\n")
     f.write("Durations: {")
     for i in range(0,len(bitstrings)-1):

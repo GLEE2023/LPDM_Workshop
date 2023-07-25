@@ -59,9 +59,6 @@ def plot_total_data(time_list: np.array, data_list: np.array):
     for i in range(0,8):
         plt.plot(time_list[i],data_list[i],label=label_reference[i])
 
-    #plt.figure(figsize=(10,4))
-    #for index, value in enumerate(zip(data_list, time_list)):
-    #    plt.plot(value[1], value[0], label = label_reference[index])
     datarate_limit = 1000
     max_datarate = np.ones(len(data_list[0]))
     for i in range(0,len(max_datarate)):
@@ -101,10 +98,6 @@ def plot_total_power(time_list: np.array, power_list: np.array):
     
     for i in range(0,8):
         plt.plot(time_list[i],power_list[i],label=label_reference[i])
-
-    #plt.figure(figsize=(10,4))
-    #for index, value in enumerate(zip(data_list, time_list)):
-    #    plt.plot(value[1], value[0], label = label_reference[index])
 
     plt.grid(visible=True)
     plt.xlabel("Time (s)",fontsize=16)
@@ -256,4 +249,43 @@ def plot_power_separate(time_list, power_list):
     plt.grid()
     plt.ylabel("Power (mW)")
     plt.xlabel("Time (s)")
-    plt.title("Power (mW) vs Time All Sensors");
+    plt.title("Power (mW) vs Time All Sensors")
+    
+def plot_rf_data(time_list: np.array, data_list: np.array): 
+    """
+    Plot each line in data_list using time_list.
+    
+    Parameters
+        time_list (numpy array): list of time vectors returned from run_sim for each sensor.
+        data_list (numpy array): list of data vectors returned from run_sim for each sensor.
+
+    Returns
+        None
+    """
+    
+    label_reference = {
+        0:"Min. Data", 1:"Microcontroller", 2:"RF", 3:"Total Data"
+    }
+    
+    for i in range(0,4):
+        plt.plot(time_list[i],data_list[i],label=label_reference[i])
+
+    datarate_limit = 1000
+    max_datarate = np.ones(len(data_list[0]))
+    for i in range(0,len(max_datarate)):
+        max_datarate[i] = (i * datarate_limit) + datarate_limit
+    plt.plot(time_list[0],max_datarate,label="Max. Datarate")
+    plt.grid(visible=True)
+    plt.xlabel("Time (s)",fontsize=16)
+    plt.ylabel("Data (Bytes)",fontsize=16)
+    plt.title("Data vs Time for all Components",fontsize=16)
+    plt.ion()
+    plt.tight_layout()
+    plt.legend()
+    
+    timePossible = np.where(data_list[3]>max_datarate,time_list[0],None)
+    for i in range(0,len(max_datarate)):
+        if(timePossible[i]!=None and i!=0):
+            print("ERROR! At least one of your configurations exceeds the maximum datarate at " + str(i) + " seconds.")
+            return "ERROR"
+    return "Configurations meet datarate requirements"

@@ -5,9 +5,7 @@ from source.helperFunctions import generate_active_list
 from source.Sensor import Sensor
 
 VOLTAGE = 3.3 #Volts
-SHUTDOWN_CURRENT = None 
-ACTIVE_CURRENT = None
-MEASUREMENT_RATE = 0 #bps
+MEASUREMENT_RATE = 0 #seconds
 
 class SX1272(Sensor):
     def __init__(self, time_step, duration, modes_SX1, loop_rate): 
@@ -30,11 +28,45 @@ class SX1272(Sensor):
           -------
             all_configs: list of tuples representing valid configurations
         """
-        all_configs = None
-        
-        modes = ["SLEEP", "STANDBY", "TX", "RXCONTINUOUS", "RXSINGLE", "IDLE", "FSTX", "FSRX", "CAD"]
-        
-        
+        all_configs = []
+        output_power = [7, 13, 17, 20]
+        bandwith = [125, 250, 500]
+        lna_boost = ["ON", "OFF"]
+        rx_mode = ["RXCONTINUOUS", "RXSINGLE"]
+        for op in output_power:
+            if op == 7:
+                op_configs = [("TX",915,7,125,"OFF",12,6,ps) for ps in range(233)]
+                all_configs += op_configs
+            elif op == 13:
+                op_configs = [("TX",915,13,125,"OFF",12,6,ps) for ps in range(233)]
+                all_configs += op_configs
+            elif op == 17:
+                op_configs = [("TX",915,17,125,"OFF",12,6,ps) for ps in range(233)]
+                all_configs += op_configs
+            elif op == 20:
+                op_configs = [("TX",915,20,125,"OFF",12,6,ps) for ps in range(233)]
+                all_configs += op_configs
+        for b in bandwith:
+            if b == 125:
+                bandwith_configs = [(mode,915,13,125,lna,12,6,ps) for mode in rx_mode for lna in lna_boost for ps in range(256)]
+                cad_configs = [("CAD",915,13,125,"OFF",12,6,ps) for ps in range(233)]
+                all_configs += bandwith_configs + cad_configs
+            elif b == 250:
+                bandwith_configs = [(mode,915,13,250,lna,12,6,ps) for mode in rx_mode for lna in lna_boost for ps in range(256)]
+                cad_configs = [("CAD",915,13,250,"OFF",12,6,ps) for ps in range(233)]
+                all_configs += bandwith_configs +cad_configs
+            elif b == 500:
+                bandwith_configs = [(mode,915,13,500,lna,12,6,ps) for mode in rx_mode for lna in lna_boost for ps in range(256)]
+                cad_configs = [("CAD",915,13,500,"OFF",12,6,ps) for ps in range(233)]
+                all_configs += bandwith_configs + cad_configs
+
+
+        fstx_config = [("FSTX",915,13,125,"OFF",12,6,ps) for ps in range(233)]
+        fsrx_config = [("FSRX",915,13,125,"OFF",12,6,ps) for ps in range(233)]
+        sleep_config = [("SLEEP",915,13,125,"OFF",12,6,ps) for ps in range(233)]
+        standby_config = [("STANDBY",915,13,125,"OFF",12,6,ps) for ps in range(233)]
+        idle_config = [("IDLE",915,13,125,"OFF",12,6,ps) for ps in range(233)]
+        all_configs += fstx_config + fsrx_config + sleep_config + standby_config + idle_config
         return all_configs
     
     def error_check(self):
@@ -49,10 +81,13 @@ class SX1272(Sensor):
           -------
             error: True if a configuration is invalid, False otherwise
         """
-        error = None
-        
-        # Code here
-        
+        error = False
+        all_configs = self.generate_valid_configs_sx1()
+        for param in self.modes_SX1:
+            if param[0] not in all_configs:
+                print("Error. Invalid configuration {}. Valid Configurations to choose from: {}".format(param[0], all_configs))
+                error = True
+
         return error
     
     def compute_power(self, mode, frequency, output_power, bandwidth, lna_boost, spreading_factor, coding_rate, payload_size, transmission_reception_rate):
@@ -67,8 +102,8 @@ class SX1272(Sensor):
             power: Float representing power in mW
         """    
         power = 0
-        active_time_period = payload_size/transmission_reception_rate
-        standby_time = 2 * (1/transmission_reception_rate) #an estimate
+        active_time_period = payload_size*8/4800
+        standby_time = 1 - active_time_period #an estimate
         modes = ["SLEEP", "STANDBY", "TX", "RXCONTINUOUS", "RXSINGLE", "IDLE", "FSTX", "FSRX", "CAD"]
         if frequency == 915 and spreading_factor == 12 and coding_rate == 6:
           if mode == modes[0]:
@@ -76,7 +111,7 @@ class SX1272(Sensor):
           elif mode == modes[1]:
               power = (1.4*VOLTAGE)
           elif mode == modes[2]:
-            if MEASUREMENT_RATE < transmission_reception_rate:
+            if active_time_period < transmission_reception_rate:
                 if output_power == 7:
                     power = (active_time_period)*(18*VOLTAGE) + (standby_time * ((1.5*VOLTAGE)/1000))
                 elif output_power == 13:
@@ -89,7 +124,7 @@ class SX1272(Sensor):
                 print('Your choice of transmission rate exceeded the speed of the SX1272 sensor.')
             
           elif mode == modes[3]:
-            if MEASUREMENT_RATE < transmission_reception_rate:
+            if active_time_period < transmission_reception_rate:
                 if lna_boost == "OFF":
                     if bandwidth == 125:
                         power = (active_time_period)*(9.7*VOLTAGE) + (standby_time * ((1.5*VOLTAGE)/1000))
@@ -108,7 +143,7 @@ class SX1272(Sensor):
                 print('Your choice of reception rate exceeded the speed of the SX1272 sensor.')
 
           elif mode == modes[4]:
-            if MEASUREMENT_RATE < transmission_reception_rate:
+            if active_time_period < transmission_reception_rate:
                 if lna_boost == "OFF":
                     if bandwidth == 125:
                         power = (active_time_period)*(9.7*VOLTAGE) + (standby_time * ((1.5*VOLTAGE)/1000))
@@ -128,12 +163,12 @@ class SX1272(Sensor):
           elif mode == modes[5]:
               power = ((1.5*VOLTAGE)/1000)
           elif mode == modes[6]:
-            if MEASUREMENT_RATE < transmission_reception_rate:
+            if active_time_period < transmission_reception_rate:
                 power = (active_time_period)*(4.5*VOLTAGE) + (standby_time * ((1.5*VOLTAGE)/1000))
             else:
                 print('Your choice of transmission rate exceeded the speed of the SX1272 sensor.')
           elif mode == modes[7]:
-            if MEASUREMENT_RATE < transmission_reception_rate:
+            if active_time_period < transmission_reception_rate:
                 power = (active_time_period)*(4.5*VOLTAGE) + (standby_time * ((1.5*VOLTAGE)/1000))
             else:
                 print('Your choice of reception rate exceeded the speed of the SX1272 sensor.')
@@ -166,7 +201,7 @@ class SX1272(Sensor):
         if (mode == "RXCONTINUOUS" or mode == "RXSINGLE" or mode == "FSRX"):
             data = payload_size / transmission_reception_rate
         if (mode == "TX" or mode == "FSTX"):
-            data = payload_size / transmission_reception_rate
+            data = payload_size / (-1*transmission_reception_rate)
         return data
     
     def get_all_modes_power(self):
@@ -254,11 +289,11 @@ class SX1272(Sensor):
             Lists of power consumptions, data usages, and times. Empty lists if at least one mode is invalid
         """    
         
-        try:
+        error = self.error_check()
+        if error == False:
             power = self.get_all_modes_power()
             data = self.get_all_modes_data()
             self.plotData(power, data, self.time, self.active_time_params)
-            return power, data, self.time
-        except Exception as e:
-            print("An exception occurred in runSim: ", e)
-            return -1
+
+            return np.array(power), np.array(data), np.array(self.time)
+        return [], [], []
